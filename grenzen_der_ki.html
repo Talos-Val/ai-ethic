@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GRENZEN_DER_KI // T.WAGNER</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #020b0a;
+    --bg2: #050f0e;
+    --green: #00ff88;
+    --green2: #00cc66;
+    --green3: #005533;
+    --dim: #003322;
+    --red: #ff2244;
+    --amber: #ffaa00;
+    --white: #c8fce8;
+    --border: #00ff8844;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  /* Scanlines overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* CRT flicker */
+  @keyframes flicker {
+    0%,100% { opacity: 1; }
+    92% { opacity: 1; }
+    93% { opacity: 0.92; }
+    94% { opacity: 1; }
+    96% { opacity: 0.95; }
+    97% { opacity: 1; }
+  }
+  body { animation: flicker 6s infinite; }
+
+  /* Grid background */
+  .grid-bg {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image:
+      linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  /* HEADER */
+  header {
+    border: 1px solid var(--green3);
+    border-bottom: 3px solid var(--green);
+    padding: 30px 30px 20px;
+    margin-bottom: 30px;
+    position: relative;
+    background: linear-gradient(180deg, rgba(0,255,136,0.04) 0%, transparent 100%);
+  }
+
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    font-size: 11px;
+    color: var(--green3);
+    letter-spacing: 2px;
+  }
+
+  .blink {
+    animation: blink 1.2s step-end infinite;
+    color: var(--green);
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(22px, 4vw, 42px);
+    font-weight: 900;
+    color: var(--green);
+    text-shadow: 0 0 20px var(--green), 0 0 40px var(--green2), 0 0 80px var(--green3);
+    letter-spacing: 4px;
+    line-height: 1.1;
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: var(--green2);
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+  }
+
+  .meta-line {
+    font-size: 11px;
+    color: var(--green3);
+    letter-spacing: 1px;
+  }
+  .meta-line span { color: var(--green2); }
+
+  /* Corner decoration */
+  header::before, header::after {
+    content: '◈';
+    position: absolute;
+    color: var(--green);
+    font-size: 18px;
+    text-shadow: 0 0 10px var(--green);
+  }
+  header::before { top: 10px; right: 10px; }
+  header::after { bottom: 10px; right: 10px; }
+
+  /* TERMINAL BOOT */
+  .boot-log {
+    background: var(--bg2);
+    border: 1px solid var(--green3);
+    border-left: 3px solid var(--green);
+    padding: 16px 20px;
+    margin-bottom: 30px;
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--green2);
+  }
+  .boot-log .prompt { color: var(--green); }
+  .boot-log .ok { color: #00ff88; }
+  .boot-log .warn { color: var(--amber); }
+  .boot-log .err { color: var(--red); }
+
+  /* SECTION CARDS */
+  .section {
+    border: 1px solid var(--green3);
+    margin-bottom: 20px;
+    position: relative;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: rgba(0,20,12,0.6);
+  }
+  .section:hover {
+    border-color: var(--green2);
+    box-shadow: 0 0 20px rgba(0,255,136,0.08), inset 0 0 30px rgba(0,255,136,0.02);
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--green3);
+    cursor: pointer;
+    user-select: none;
+    background: rgba(0,255,136,0.03);
+  }
+  .section-header:hover { background: rgba(0,255,136,0.06); }
+
+  .section-id {
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    color: var(--green3);
+    min-width: 50px;
+    text-shadow: 0 0 6px var(--green3);
+  }
+
+  .section-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: 2px;
+    flex: 1;
+    text-shadow: 0 0 8px rgba(0,255,136,0.3);
+  }
+
+  .toggle-btn {
+    font-family: 'VT323', monospace;
+    font-size: 20px;
+    color: var(--green2);
+    transition: transform 0.3s;
+  }
+  .section.open .toggle-btn { transform: rotate(90deg); }
+
+  .section-body {
+    display: none;
+    padding: 20px;
+    font-size: 13px;
+    line-height: 1.9;
+    color: var(--white);
+    border-top: none;
+  }
+  .section.open .section-body { display: block; }
+
+  .section-body p { margin-bottom: 12px; }
+  .section-body p:last-child { margin-bottom: 0; }
+
+  .highlight { color: var(--green); font-weight: bold; }
+  .warn-text { color: var(--amber); }
+  .danger-text { color: var(--red); }
+
+  /* Tag chips */
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 14px 0;
+  }
+  .tag {
+    padding: 3px 10px;
+    border: 1px solid var(--green3);
+    font-size: 11px;
+    color: var(--green2);
+    letter-spacing: 1px;
+    background: rgba(0,255,136,0.05);
+  }
+
+  /* Argument blocks */
+  .arg-block {
+    border-left: 2px solid var(--green3);
+    padding: 10px 16px;
+    margin: 10px 0;
+    background: rgba(0,255,136,0.02);
+  }
+  .arg-block.critical { border-left-color: var(--red); }
+  .arg-block.warn { border-left-color: var(--amber); }
+  .arg-num {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    color: var(--green3);
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+
+  /* Progress bar style */
+  .rating-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 0;
+    font-size: 12px;
+    color: var(--green2);
+  }
+  .bar-track {
+    flex: 1;
+    height: 6px;
+    background: var(--dim);
+    border: 1px solid var(--green3);
+  }
+  .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green3), var(--green));
+    box-shadow: 0 0 6px var(--green2);
+  }
+
+  /* DOWNLOAD SECTION */
+  .downloads {
+    border: 1px solid var(--green);
+    padding: 24px;
+    margin-bottom: 30px;
+    background: rgba(0,255,136,0.03);
+    box-shadow: 0 0 30px rgba(0,255,136,0.05);
+  }
+
+  .dl-header {
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    color: var(--green);
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+    text-shadow: 0 0 10px var(--green);
+  }
+  .dl-header::before { content: '>> '; color: var(--green3); }
+
+  .dl-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .dl-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--green3);
+    background: rgba(0,255,136,0.04);
+    color: var(--white);
+    text-decoration: none;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .dl-btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0,255,136,0.08), transparent);
+    transition: left 0.4s;
+  }
+  .dl-btn:hover::before { left: 100%; }
+  .dl-btn:hover {
+    border-color: var(--green);
+    color: var(--green);
+    box-shadow: 0 0 12px rgba(0,255,136,0.15);
+  }
+
+  .dl-icon {
+    font-family: 'VT323', monospace;
+    font-size: 28px;
+    color: var(--green);
+    text-shadow: 0 0 8px var(--green);
+    line-height: 1;
+  }
+  .dl-name { font-size: 11px; color: var(--green2); margin-bottom: 2px; letter-spacing: 2px; }
+  .dl-size { font-size: 10px; color: var(--green3); }
+
+  /* FAZIT BOX */
+  .fazit-box {
+    border: 2px solid var(--green);
+    padding: 24px;
+    margin-bottom: 30px;
+    position: relative;
+    background: rgba(0,255,136,0.03);
+  }
+  .fazit-box::before {
+    content: 'FAZIT // CONCLUSION';
+    position: absolute;
+    top: -10px;
+    left: 20px;
+    background: var(--bg);
+    padding: 0 10px;
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    color: var(--green);
+    letter-spacing: 3px;
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--green3);
+    padding: 20px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--green3);
+    letter-spacing: 2px;
+  }
+  footer .copyright { color: var(--green2); margin-top: 6px; }
+
+  /* Divider */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--green3);
+    margin: 16px 0;
+    position: relative;
+  }
+
+  /* Typing cursor animation for code-style elements */
+  @keyframes typeIn {
+    from { width: 0; }
+    to { width: 100%; }
+  }
+
+  .quote-block {
+    border: 1px solid var(--green3);
+    padding: 16px;
+    margin: 14px 0;
+    background: rgba(0,255,136,0.02);
+    font-style: italic;
+    color: var(--green2);
+    position: relative;
+  }
+  .quote-block::before {
+    content: '"';
+    font-family: 'VT323', monospace;
+    font-size: 40px;
+    color: var(--green3);
+    position: absolute;
+    top: 4px;
+    left: 10px;
+    line-height: 1;
+  }
+  .quote-block p { padding-left: 20px; }
+  .quote-attr { font-style: normal; font-size: 11px; color: var(--green3); margin-top: 8px; padding-left: 20px; letter-spacing: 2px; }
+
+  @media (max-width: 600px) {
+    .dl-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="top-bar">
+      <span>SYSTEM::PETRINUM_GYMNASIUM</span>
+      <span class="blink">● ONLINE</span>
+      <span id="clock">--:--:--</span>
+    </div>
+    <h1>GRENZEN DER KI</h1>
+    <div class="subtitle">WAS DARF EINE KI NICHT? // EXPERTENARBEIT</div>
+    <div class="meta-line">
+      AUTOR: <span>TITUS WAGNER</span> &nbsp;|&nbsp;
+      KLASSE: <span>8D → 9</span> &nbsp;|&nbsp;
+      SCHULE: <span>GYM. PETRINUM</span> &nbsp;|&nbsp;
+      HALBJAHR: <span>1. HJ</span>
+    </div>
+  </header>
+
+  <!-- BOOT LOG -->
+  <div class="boot-log">
+    <div><span class="prompt">[SYS]&gt;</span> Lade Expertenarbeit... <span class="ok">OK</span></div>
+    <div><span class="prompt">[SYS]&gt;</span> Lade Präsentation... <span class="ok">OK</span></div>
+    <div><span class="prompt">[SYS]&gt;</span> Ethik-Modul initialisiert <span class="ok">OK</span></div>
+    <div><span class="prompt">[SYS]&gt;</span> Themen erkannt: <span class="ok">TOTENCHATS / KRIEGS-KI / ALTENPFLEGE</span></div>
+    <div><span class="prompt">[SYS]&gt;</span> Moralisches Warnsystem: <span class="warn">AKTIV</span></div>
+    <div><span class="prompt">[SYS]&gt;</span> Quellenverzeichnis: <span class="ok">36 QUELLEN VERIFIZIERT</span></div>
+    <div><span class="prompt">[SYS]&gt;</span> Status: <span class="ok">BEREIT // ZUGRIFF ERLAUBT</span> <span class="blink">_</span></div>
+  </div>
+
+  <!-- DOWNLOADS -->
+  <div class="downloads">
+    <div class="dl-header">DATEI-ZUGRIFF // DOWNLOADS</div>
+    <div class="dl-grid">
+      <a class="dl-btn" href="/mnt/user-data/uploads/Expertenarbeit_KI_fertig_final.pdf" download="Expertenarbeit_KI_Titus_Wagner.pdf">
+        <div class="dl-icon">⬛</div>
+        <div>
+          <div class="dl-name">EXPERTENARBEIT.PDF</div>
+          <div>Volltext // 17 Seiten</div>
+          <div class="dl-size">FORMAT: PDF</div>
+        </div>
+      </a>
+      <a class="dl-btn" href="/mnt/user-data/uploads/Grenzen_der_KI___Was_darf_eine_KI.pptx" download="Praesentation_KI_Titus_Wagner.pptx">
+        <div class="dl-icon">▣</div>
+        <div>
+          <div class="dl-name">PRÄSENTATION.PPTX</div>
+          <div>Folien // Vortrag</div>
+          <div class="dl-size">FORMAT: PPTX</div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- SECTION 0: EINLEITUNG -->
+  <div class="section open">
+    <div class="section-header" onclick="toggle(this)">
+      <div class="section-id">00.</div>
+      <div class="section-title">EINLEITUNG // WARUM GRENZEN?</div>
+      <div class="toggle-btn">▶</div>
+    </div>
+    <div class="section-body">
+      <div class="quote-block">
+        <p>KI ist wahrscheinlich das Beste oder das Schlimmste, was der Menschheit passieren kann.</p>
+        <div class="quote-attr">— STEPHEN HAWKING // PHYSIKER</div>
+      </div>
+      <p>Die Arbeit stellt nicht die Frage <span class="highlight">„Was kann eine KI?"</span>, sondern bewusst: <span class="highlight">„Was darf sie nicht?"</span> — Das Modalverb <em>„dürfen"</em> signalisiert: Es geht um moralische Grenzen, nicht um technische Limitierungen.</p>
+      <p>Anlass ist die rasante Entwicklung künstlicher Intelligenz. Microsoft-Chef Satya Nadella schätzt, dass sich die KI-Leistung alle sechs Monate verdoppelt. Was begeistert, birgt auch Risiko. Die Arbeit lädt ein, sich eine eigene Meinung zu bilden.</p>
+      <div class="tags">
+        <span class="tag">ETHIK</span>
+        <span class="tag">MORAL</span>
+        <span class="tag">VERANTWORTUNG</span>
+        <span class="tag">GESELLSCHAFT</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 1: ETHIK & MORAL -->
+  <div class="section">
+    <div class="section-header" onclick="toggle(this)">
+      <div class="section-id">01.</div>
+      <div class="section-title">ETHIK & MORAL // DEFINITIONEN</div>
+      <div class="toggle-btn">▶</div>
+    </div>
+    <div class="section-body">
+      <div class="rating-bar"><span style="min-width:120px">MORAL</span><div class="bar-track"><div class="bar-fill" style="width:80%"></div></div><span>„Was & Wie"</span></div>
+      <div class="rating-bar"><span style="min-width:120px">ETHIK</span><div class="bar-track"><div class="bar-fill" style="width:95%"></div></div><span>„Warum?"</span></div>
+      <hr class="divider">
+      <p><span class="highlight">Moral</span> = System von Regeln, Werten und Prinzipien, die in einer Gemeinschaft festlegen, was gut/böse und richtig/falsch ist.</p>
+      <p><span class="highlight">Ethik</span> = Die philosophische Disziplin, die Moral reflektiert und analysiert. Beispiel: Lügen ist moralisch falsch — aber die Ethik fragt, ob es Situationen gibt, in denen es akzeptabel ist.</p>
+      <p>Ohne Moral: keine Gesetze, keine Normen → <span class="danger-text">Chaos und Konflikte</span>. Moral schafft Vertrauen, Respekt und die Grundlage für ein friedvolles Zusammenleben.</p>
+    </div>
+  </div>
+
+  <!-- SECTION 2: WAS IST KI -->
+  <div class="section">
+    <div class="section-header" onclick="toggle(this)">
+      <div class="section-id">02.</div>
+      <div class="section-title">WAS IST KI? // KLASSIFIZIERUNG</div>
+      <div class="toggle-btn">▶</div>
+    </div>
+    <div class="section-body">
+      <p>KI = Bereich der Informatik, der Systeme erschafft, die Verhalten automatisch ausführen und selbstständig lernen.</p>
+      <hr class="divider">
+      <div class="arg-block">
+        <div class="arg-num">SCHWACHE KI // EXISTIERT HEUTE</div>
+        Auf einen Themenbereich spezialisiert. Kategorien: Wissensbasierte Systeme (z.B. ChatGPT), Mustererkennung/-analyse, Mustervorhersage, Robotik (Planetenerkundung), AI-Alignment (KI nach menschlicher Moral)
+      </div>
+      <div class="arg-block critical">
+        <div class="arg-num">STARKE KI // EXISTIERT NOCH NICHT</div>
+        Theoretisches Konzept: handelt wie ein Mensch, bearbeitet beliebige Aufgabenbereiche, versteht und simuliert menschliches Denken. <span class="danger-text">Noch rein spekulativ.</span>
+      </div>
+      <div class="tags">
+        <span class="tag">CHATGPT</span>
+        <span class="tag">ROBOTIK</span>
+        <span class="tag">MUSTERERKENNUNG</span>
+        <span class="tag">AI-ALIGNMENT</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: TOTENCHATS -->
+  <div class="section">
+    <div class="section-header" onclick="toggle(this)">
+      <div class="section-id">03.</div>
+      <div class="section-title">TOTENCHATS // „YOU, ONLY VIRTUAL"</div>
+      <div class="toggle-btn">▶</div>
+    </div>
+    <div class="section-body">
+      <p>Das Programm <span class="highlight">„You, only virtual"</span> (Justin Harrison, 2021/2023) ermöglicht es, mithilfe eines KI-Chatbots verstorbene Personen zu simulieren — auf Basis von persönlichen Daten, Fotos, Videos und Sprachnachrichten.</p>
+      <hr class="divider">
+      <div class="arg-block critical">
+        <div class="arg-num">KRITIKPUNKT_01 // IDENTITÄT & WÜRDE</div>
+        Ein möglichst realistisches Abbild eines Menschen ist de facto ein Klon. Klone sind moralisch verboten. Kant: Menschen dürfen nie als bloßes Mittel zum Zweck benutzt werden. Die KI-Kopie wird zum <span class="danger-text">Produkt</span> — das widerspricht der menschlichen Einzigartigkeit als Grundrecht (GG Art. 4 & 5).
+      </div>
+      <div class="arg-block warn">
+        <div class="arg-num">KRITIKPUNKT_02 // PRIVATSPHÄRE & TOTENRUHE</div>
+        Die KI könnte Aussagen generieren, die nie existiert haben, oder private Geheimnisse offenlegen. Aus christlicher Sicht verletzt das die <span class="warn-text">Totenruhe</span> — der Verstorbene verweilt nicht im Reich Gottes, sondern bleibt künstlich auf Erden gebunden.
+      </div>
+      <div class="arg-block">
+        <div class="arg-num">KRITIKPUNKT_03 // TRAUERPROZESS</div>
+        Kübler-Ross: 5 Trauerphasen (Verweigerung → Wut → Verhandeln → Depression → Akzeptanz). Die KI hält Nutzer in einer <span class="highlight">Scheinwelt</span> fest — Verarbeitung und persönliches Wachstum werden blockiert. Ehrlichkeit sich selbst gegenüber ist eine zentrale moralische Pflicht.
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 4: KRIEG -->
+  <div class="section">
+    <div class="section-header" onclick="toggle(this)">
+      <div class="section-id">04.</div>
+      <div class="section-title">KI IM KRIEG // PROJECT MAVEN</div>
+      <div class="toggle-btn">▶</div>
+    </div>
+    <div class="section-body">
+      <p><span class="highlight">Project Maven</span> (USA): KI soll selbstständig Feinde identifizieren und eliminieren können — eine autonome Waffe.</p>
+      <hr class="divider">
+      <p><span class="warn-text">Scheinbare Vorteile:</span> Soldaten riskieren ihr Leben nicht mehr. Kein direktes Töten durch Menschen. Entlastung des Gewissens.</p>
+      <div class="arg-block critical">
+        <div class="arg-num">MORALISCHES KERNPROBLEM</div>
+        <p>Schuld ist ein <span class="danger-text">moralischer Bremsmechanismus</span>. Menschen töten ungerne — ihr Schuldbewusstsein limitiert Gewalt. Eine KI empfindet keine Schuld.</p>
+        <p>Ohne Schuld: kein Mitgefühl, keine Wiedergutmachung, keine moralische Verantwortung. Das Ausschalten des Schuldgefühls ist der <span class="danger-text">Beginn einer moralischen Katastrophe</span> für die gesamte Gesellschaft.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 5: ALTENPFLEGE -->
+  <div class="section">
+    <div class="section-header" onclick="toggle(this)">
+      <div class="section-id">05.</div>
+      <div class="section-title">KI IN DER ALTENPFLEGE // ENTMENSCHLICHUNG?</div>
+      <div class="toggle-btn">▶</div>
+    </div>
+    <div class="section-body">
+      <p>Demografischer Wandel: mehr Alte, weniger Junge, sinkende Geburtenrate. Bis 2035 fehlen ca. <span class="highlight">493.000 Pflegekräfte</span> in Deutschland.</p>
+      <hr class="divider">
+      <div class="arg-block warn">
+        <div class="arg-num">DAS DILEMMA</div>
+        KI-Roboter könnten die Lücke füllen — aber: Pflege durch Empathie und menschliche Zuwendung ist kein optionales Extra. Es ist eine moralische Pflicht. Aristoteles: Der Mensch als „zoon politikon" wächst durch gegenseitige Hilfe.
+      </div>
+      <div class="arg-block critical">
+        <div class="arg-num">KERNTHESE</div>
+        Empathie ist das, was Menschen zu Menschen macht. Wer diese Fähigkeit an Maschinen abgibt, beraubt sich der Möglichkeit, ein gutes Leben zu führen — und startet einen Prozess der <span class="danger-text">Entmenschlichung der Gesellschaft</span>.
+      </div>
+    </div>
+  </div>
+
+  <!-- FAZIT -->
+  <div class="fazit-box">
+    <p style="margin-bottom:14px; color:var(--green2);">Die Arbeit zeigt exemplarisch: Technisch Mögliches muss moralisch begrenzt werden. Die drei Fallbeispiele verdeutlichen, dass unreflektierter KI-Einsatz fundamentale Werte verletzt.</p>
+    <div class="rating-bar"><span style="min-width:150px; font-size:11px">TOTENCHATS</span><div class="bar-track"><div class="bar-fill" style="width:90%; background: linear-gradient(90deg, #550000, var(--red));"></div></div><span style="color:var(--red); font-size:11px">HOCH KRITISCH</span></div>
+    <div class="rating-bar"><span style="min-width:150px; font-size:11px">KRIEGS-KI</span><div class="bar-track"><div class="bar-fill" style="width:100%; background: linear-gradient(90deg, #550000, var(--red));"></div></div><span style="color:var(--red); font-size:11px">KATASTROPHAL</span></div>
+    <div class="rating-bar"><span style="min-width:150px; font-size:11px">ALTENPFLEGE-KI</span><div class="bar-track"><div class="bar-fill" style="width:70%; background: linear-gradient(90deg, var(--green3), var(--amber));"></div></div><span style="color:var(--amber); font-size:11px">KRITISCH</span></div>
+    <hr class="divider">
+    <div class="quote-block" style="margin-top:14px">
+      <p>Wissenschaft ist ein mächtiges Werkzeug. Wie es gebraucht wird, ob zum Heile oder zum Fluche des Menschen, hängt vom Menschen ab, nicht vom Werkzeug.</p>
+      <div class="quote-attr">— ALBERT EINSTEIN // PHYSIKER</div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div>SYSTEM::PETRINUM // KI-ETHIK-MODUL v1.0</div>
+    <div class="copyright">© 2025 TITUS WAGNER // GYMNASIUM PETRINUM // ALLE RECHTE VORBEHALTEN</div>
+    <div style="margin-top:8px; color: var(--green3);">ZUGRIFFE GESAMT: <span id="counter" style="color:var(--green2)">1</span> <span class="blink">_</span></div>
+  </footer>
+
+</div>
+
+<script>
+  // Clock
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('clock').textContent =
+      now.toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // Toggle sections
+  function toggle(header) {
+    const section = header.parentElement;
+    section.classList.toggle('open');
+  }
+
+  // Fake access counter
+  let count = Math.floor(Math.random() * 800) + 200;
+  document.getElementById('counter').textContent = count;
+  setInterval(() => {
+    if (Math.random() < 0.3) {
+      count++;
+      document.getElementById('counter').textContent = count;
+    }
+  }, 3000);
+
+  // Glitch effect on h1
+  const h1 = document.querySelector('h1');
+  setInterval(() => {
+    if (Math.random() < 0.05) {
+      h1.style.textShadow = '2px 0 #ff2244, -2px 0 #00ffff, 0 0 20px #00ff88';
+      setTimeout(() => {
+        h1.style.textShadow = '0 0 20px var(--green), 0 0 40px var(--green2), 0 0 80px var(--green3)';
+      }, 80);
+    }
+  }, 500);
+</script>
+
+</body>
+</html>
